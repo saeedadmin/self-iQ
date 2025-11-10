@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 use Dotenv\Dotenv;
-use RuntimeException;
 
 $rootPath = dirname(__DIR__);
 

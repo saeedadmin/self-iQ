@@ -18,7 +18,7 @@ final class PostgresSessionHandler
         $settings->setUsername($user);
         $settings->setPassword($password);
         $settings->setEphemeralFilesystemPrefix($prefix);
-        $settings->setSerializer(SerializerType::SERIALIZER_DEFAULT);
+        $settings->setSerializer(SerializerType::SERIALIZE);
         $settings->setEnableFileReferenceDb(true);
         $settings->setEnableFullPeerDb(true);
         $settings->setEnablePeerInfoDb(true);
