@@ -18,6 +18,7 @@ $requiredEnv = [
     'TELEGRAM_API_HASH',
     'SESSION_PREFIX',
     'SESSION_FILE',
+    'OWNER_USER_ID',
     'DB_HOST',
     'DB_PORT',
     'DB_NAME',

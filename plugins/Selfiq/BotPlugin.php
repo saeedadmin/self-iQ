@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace MadelinePlugin\Selfiq;
 
-use danog\MadelineProto\PluginEventHandler;
-
-final class BotPlugin extends PluginEventHandler
+final class BotPlugin extends OwnerOnlyPlugin
 {
     public function onStart(): void
     {
@@ -17,6 +15,10 @@ final class BotPlugin extends PluginEventHandler
     {
         $message = $update['message'] ?? null;
         if (!is_array($message) || ($message['out'] ?? false)) {
+            return;
+        }
+
+        if (!$this->isOwnerMessage($message)) {
             return;
         }
 

@@ -4,14 +4,18 @@ declare(strict_types=1);
 
 namespace App\Bot\Plugins;
 
-use danog\MadelineProto\SimpleEventHandler;
+use MadelinePlugin\Selfiq\OwnerOnlyPlugin;
 
-final class WelcomePlugin extends SimpleEventHandler
+final class WelcomePlugin extends OwnerOnlyPlugin
 {
     public function onUpdateNewMessage(array $update): void
     {
         $message = $update['message'] ?? null;
         if (!is_array($message) || ($message['out'] ?? false)) {
+            return;
+        }
+
+        if (!$this->isOwnerMessage($message)) {
             return;
         }
 
