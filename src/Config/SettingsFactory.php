@@ -24,12 +24,13 @@ final class SettingsFactory
 
         $logLevel = getenv('LOG_LEVEL') ?: 'info';
         $settings->getLogger()->setLevel(match (strtolower($logLevel)) {
+            'fatal' => Logger::LEVEL_FATAL,
             'error' => Logger::LEVEL_ERROR,
             'warning', 'warn' => Logger::LEVEL_WARNING,
             'notice' => Logger::LEVEL_NOTICE,
-            'verbose' => Logger::LEVEL_VERBOSE,
-            'ultra_verbose' => Logger::LEVEL_ULTRA_VERBOSE,
-            default => Logger::LEVEL_INFO,
+            'verbose', 'debug' => Logger::LEVEL_VERBOSE,
+            'ultra_verbose', 'trace' => Logger::LEVEL_ULTRA_VERBOSE,
+            default => Logger::LEVEL_NOTICE,
         });
 
         return $settings;
