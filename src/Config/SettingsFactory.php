@@ -6,7 +6,6 @@ namespace App\Config;
 
 use App\Session\PostgresSessionHandler;
 use danog\MadelineProto\Logger;
-use danog\MadelineProto\Magic;
 use danog\MadelineProto\Settings;
 use danog\MadelineProto\Settings\AppInfo;
 
@@ -22,8 +21,6 @@ final class SettingsFactory
 
         $settings->setAppInfo($appInfo);
         $settings->setDb(PostgresSessionHandler::createSettings());
-
-        Magic::setOption(['ipc' => ['enabled' => false, 'slow' => true]]);
 
         $logLevel = getenv('LOG_LEVEL') ?: 'info';
         $settings->getLogger()->setLevel(match (strtolower($logLevel)) {
