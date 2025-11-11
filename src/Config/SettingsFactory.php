@@ -4,10 +4,7 @@ declare(strict_types=1);
 
 namespace App\Config;
 
-use App\Session\PostgresSessionHandler;
-use danog\MadelineProto\Logger;
-use danog\MadelineProto\Settings;
-use danog\MadelineProto\Settings\AppInfo;
+use Tak\Liveproto\Utils\Settings;
 
 final class SettingsFactory
 {
@@ -15,24 +12,51 @@ final class SettingsFactory
     {
         $settings = new Settings();
 
-        $appInfo = new AppInfo();
-        $appInfo->setApiId((int) getenv('TELEGRAM_API_ID'));
-        $appInfo->setApiHash((string) getenv('TELEGRAM_API_HASH'));
+        $settings->setApiId(self::envInt('TELEGRAM_API_ID'));
+        $settings->setApiHash(self::envString('TELEGRAM_API_HASH'));
 
-        $settings->setAppInfo($appInfo);
-        $settings->setDb(PostgresSessionHandler::createSettings());
+        $settings->setDeviceModel(self::envString('DEVICE_MODEL', 'Koyeb LiveProto'));
+        $settings->setSystemVersion(self::envString('SYSTEM_VERSION', '1.0'));
+        $settings->setAppVersion(self::envString('APP_VERSION', '1.0.0'));
+        $settings->setSystemLangCode(self::envString('SYSTEM_LANG_CODE', 'en-US'));
+        $settings->setLangCode(self::envString('LANG_CODE', 'en'));
 
-        $logLevel = getenv('LOG_LEVEL') ?: 'info';
-        $settings->getLogger()->setLevel(match (strtolower($logLevel)) {
-            'fatal' => Logger::LEVEL_FATAL,
-            'error' => Logger::LEVEL_ERROR,
-            'warning', 'warn' => Logger::LEVEL_WARNING,
-            'notice' => Logger::LEVEL_NOTICE,
-            'verbose', 'debug' => Logger::LEVEL_VERBOSE,
-            'ultra_verbose', 'trace' => Logger::LEVEL_ULTRA_VERBOSE,
-            default => Logger::LEVEL_NOTICE,
-        });
+        $settings->setReceiveUpdates(true);
+        $settings->setHotReload(false);
+
+        $host = self::envString('MYSQL_HOST');
+        $port = self::envInt('MYSQL_PORT', 3306);
+        $settings->setServer(sprintf('%s:%d', $host, $port));
+        $settings->setUsername(self::envString('MYSQL_USER'));
+        $settings->setPassword(self::envString('MYSQL_PASSWORD'));
+        $settings->setDatabase(self::envString('MYSQL_DB'));
 
         return $settings;
+    }
+
+    private static function envString(string $key, ?string $default = null): string
+    {
+        $value = getenv($key);
+        if ($value === false || $value === '') {
+            if ($default !== null) {
+                return $default;
+            }
+            throw new \RuntimeException(sprintf('Environment variable %s is required.', $key));
+        }
+
+        return (string) $value;
+    }
+
+    private static function envInt(string $key, ?int $default = null): int
+    {
+        $value = getenv($key);
+        if ($value === false || $value === '') {
+            if ($default !== null) {
+                return $default;
+            }
+            throw new \RuntimeException(sprintf('Environment variable %s is required.', $key));
+        }
+
+        return (int) $value;
     }
 }

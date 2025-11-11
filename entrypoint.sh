@@ -6,13 +6,11 @@ if [ ! -f /app/vendor/autoload.php ]; then
     exit 1
 fi
 
-SESSION_FILE_PATH="${SESSION_FILE:-}"
-if [ -z "$SESSION_FILE_PATH" ]; then
-    echo "SESSION_FILE environment variable is required." >&2
+SESSION_NAME="${SESSION_NAME:-}"
+if [ -z "$SESSION_NAME" ]; then
+    echo "SESSION_NAME environment variable is required." >&2
     exit 1
 fi
-
-mkdir -p "$(dirname "$SESSION_FILE_PATH")"
 
 php -S 0.0.0.0:${PORT:-8080} -t public &
 PHP_SERVER_PID=$!

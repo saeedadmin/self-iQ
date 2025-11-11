@@ -15,14 +15,13 @@ if (is_file($rootPath . '/.env')) {
 $requiredEnv = [
     'TELEGRAM_API_ID',
     'TELEGRAM_API_HASH',
-    'SESSION_PREFIX',
-    'SESSION_FILE',
+    'SESSION_NAME',
     'OWNER_USER_ID',
-    'DB_HOST',
-    'DB_PORT',
-    'DB_NAME',
-    'DB_USER',
-    'DB_PASSWORD',
+    'MYSQL_HOST',
+    'MYSQL_PORT',
+    'MYSQL_USER',
+    'MYSQL_PASSWORD',
+    'MYSQL_DB',
 ];
 
 foreach ($requiredEnv as $key) {

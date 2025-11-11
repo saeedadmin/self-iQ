@@ -2,16 +2,22 @@
 
 declare(strict_types=1);
 
-use App\Bot\BaseHandler;
+use App\Bot\Handler;
 use App\Config\SettingsFactory;
+use Tak\Liveproto\Network\Client;
 
 require_once dirname(__DIR__, 2) . '/config/bootstrap.php';
 
-$sessionFile = getenv('SESSION_FILE');
-if ($sessionFile === false || $sessionFile === '') {
-    throw new RuntimeException('SESSION_FILE env variable is not set.');
+$sessionName = getenv('SESSION_NAME');
+if ($sessionName === false || $sessionName === '') {
+    throw new RuntimeException('SESSION_NAME env variable is not set.');
 }
 
 $settings = SettingsFactory::make();
 
-BaseHandler::startAndLoop($sessionFile, $settings);
+$client = new Client($sessionName, 'mysql', $settings);
+
+$ownerId = (int) getenv('OWNER_USER_ID');
+$client->addHandler(new Handler($client, $ownerId));
+
+$client->start();

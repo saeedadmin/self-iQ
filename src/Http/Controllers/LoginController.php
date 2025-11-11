@@ -5,16 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Config\SettingsFactory;
-use danog\MadelineProto\API;
-use danog\MadelineProto\RPCErrorException;
 use RuntimeException;
+use Tak\Liveproto\Network\Client;
+use Tak\Liveproto\Enums\Authentication;
 use Throwable;
 
 final class LoginController
 {
-    private const SESSION_KEY = 'madeline_session';
-    private ?API $client = null;
-    private ?bool $authorized = null;
+    private const SESSION_KEY = 'liveproto_session';
+    private ?Client $client = null;
 
     public function show(): void
     {
@@ -34,20 +33,20 @@ final class LoginController
         }
 
         try {
-            $MadelineProto = $this->getClient();
-            if ($this->isAuthorized($MadelineProto)) {
+            $client = $this->getClient();
+            $client->connect();
+
+            if ($client->isAuthorized()) {
                 $this->setFlash('success', 'حساب از قبل لاگین شده است.');
                 $this->redirect('/');
             }
 
-            $MadelineProto->phoneLogin($phone);
+            $client->send_code(phone_number: preg_replace('/[^\d]/', '', $phone));
 
             $_SESSION[self::SESSION_KEY]['phone'] = $phone;
             $this->setFlash('success', 'کد تایید ارسال شد.');
-        } catch (RPCErrorException $e) {
-            $this->setFlash('error', 'خطای تلگرام: ' . $e->getMessage());
         } catch (Throwable $e) {
-            $this->setFlash('error', 'خطای داخلی: ' . $e->getMessage());
+            $this->setFlash('error', 'خطا در ارسال کد: ' . $e->getMessage());
         }
 
         $this->redirect('/');
@@ -63,19 +62,16 @@ final class LoginController
 
         try {
             $client = $this->getClient();
-            $client->completePhoneLogin($phoneCode);
-            $this->authorized = true;
+            $client->sign_in(code: $phoneCode);
 
             $this->setFlash('success', 'ورود با موفقیت انجام شد.');
-        } catch (RPCErrorException $e) {
-            if ($e->rpc === 'SESSION_PASSWORD_NEEDED') {
+        } catch (Throwable $e) {
+            if (str_contains($e->getMessage(), 'SESSION_PASSWORD_NEEDED')) {
                 $_SESSION[self::SESSION_KEY]['need_password'] = true;
                 $this->setFlash('error', 'رمز دو مرحله‌ای لازم است.');
             } else {
-                $this->setFlash('error', 'خطای تلگرام: ' . $e->getMessage());
+                $this->setFlash('error', 'خطا در تایید کد: ' . $e->getMessage());
             }
-        } catch (Throwable $e) {
-            $this->setFlash('error', 'خطای داخلی: ' . $e->getMessage());
         }
 
         $this->redirect('/');
@@ -91,15 +87,12 @@ final class LoginController
 
         try {
             $client = $this->getClient();
-            $client->complete2faLogin($password);
+            $client->sign_in(password: $password);
 
-            $this->setFlash('success', 'ورود کامل شد.');
             unset($_SESSION[self::SESSION_KEY]['need_password']);
-            $this->authorized = true;
-        } catch (RPCErrorException $e) {
-            $this->setFlash('error', 'خطای تلگرام: ' . $e->getMessage());
+            $this->setFlash('success', 'ورود کامل شد.');
         } catch (Throwable $e) {
-            $this->setFlash('error', 'خطای داخلی: ' . $e->getMessage());
+            $this->setFlash('error', 'خطا در تایید رمز: ' . $e->getMessage());
         }
 
         $this->redirect('/');
@@ -110,9 +103,9 @@ final class LoginController
         $_SESSION[self::SESSION_KEY] = [];
         try {
             $client = $this->getClient();
+            $client->disconnect();
             $client->logout();
             $this->setFlash('success', 'خروج انجام شد.');
-            $this->authorized = false;
         } catch (Throwable $e) {
             $this->setFlash('error', 'خطا در خروج: ' . $e->getMessage());
         }
@@ -120,47 +113,33 @@ final class LoginController
         $this->redirect('/');
     }
 
-    private function getClient(): API
+    private function getClient(): Client
     {
-        if ($this->client instanceof API) {
+        if ($this->client instanceof Client) {
             return $this->client;
         }
 
-        $sessionFile = getenv('SESSION_FILE');
-        if ($sessionFile === false || $sessionFile === '') {
-            throw new RuntimeException('SESSION_FILE env variable is not set.');
+        $sessionName = getenv('SESSION_NAME');
+        if ($sessionName === false || $sessionName === '') {
+            throw new RuntimeException('SESSION_NAME env variable is not set.');
         }
 
         $settings = SettingsFactory::make();
-
-        $this->client = new API($sessionFile, $settings);
+        $this->client = new Client($sessionName, 'mysql', $settings);
 
         return $this->client;
     }
 
-    private function getAuthStatus(API $client): array
+    private function getAuthStatus(Client $client): array
     {
         $state = $_SESSION[self::SESSION_KEY] ?? [];
+        $step = $client->getStep();
+
         return [
             'phone' => $state['phone'] ?? '',
-            'need_password' => $state['need_password'] ?? false,
-            'authorized' => $this->isAuthorized($client),
+            'need_password' => ($state['need_password'] ?? false) || $step === Authentication::NEED_PASSWORD,
+            'authorized' => $client->isAuthorized(),
         ];
-    }
-
-    private function isAuthorized(API $client): bool
-    {
-        if ($this->authorized !== null) {
-            return $this->authorized;
-        }
-
-        try {
-            $this->authorized = !empty($client->getSelf());
-        } catch (Throwable $e) {
-            $this->authorized = false;
-        }
-
-        return $this->authorized;
     }
 
     private function setFlash(string $key, string $message): void

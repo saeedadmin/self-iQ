@@ -4,13 +4,15 @@ FROM php:8.2-cli
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
-        libpq-dev \
+        libgmp-dev \
+        libzip-dev \
         unzip \
-    && docker-php-ext-install pdo_pgsql pgsql \
+    && docker-php-ext-configure gmp \
+    && docker-php-ext-install gmp pdo_mysql \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Composer
-env COMPOSER_ALLOW_SUPERUSER=1
+ENV COMPOSER_ALLOW_SUPERUSER=1
 RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
 WORKDIR /app
