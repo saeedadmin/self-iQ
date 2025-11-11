@@ -13,5 +13,10 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "config": {
+        "allow-plugins": {
+            "taknone/bootstrapper": true
+        }
+    }
 }
