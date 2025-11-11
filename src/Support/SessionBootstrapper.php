@@ -83,7 +83,7 @@ final class SessionBootstrapper
 
     private static function hasPrimaryKey(PDO $pdo, string $table): bool
     {
-        $stmt = $pdo->query(sprintf('SHOW INDEX FROM %s WHERE Key_name = "PRIMARY"', $table));
+        $stmt = $pdo->query(sprintf("SHOW INDEX FROM %s WHERE Key_name = 'PRIMARY'", $table));
         return $stmt !== false && $stmt->fetch(PDO::FETCH_ASSOC) !== false;
     }
 
