@@ -2,13 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Liveproto;
+namespace Tak\Liveproto\Database;
 
 use Amp\Mysql\MysqlConnectionPool;
 use Amp\Sync\LocalMutex;
 use Revolt\EventLoop;
-use Tak\Liveproto\Database\AbstractDB;
-use Tak\Liveproto\Database\AbstractPeers;
 use Tak\Liveproto\Utils\Logging;
 use Tak\Liveproto\Utils\Tools;
 
