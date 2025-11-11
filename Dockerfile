@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 
-FROM php:8.2-cli
+FROM php:8.3-cli
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
