@@ -22,11 +22,13 @@ final class MySQL implements AbstractDB, AbstractPeers
     public function init(string $table): bool
     {
         $quotedTable = $this->quoteIdentifier($table);
-        $hasTable = $this->connection
+        $tableExists = $this->connection
             ->query(sprintf('SHOW TABLES LIKE %s', $this->quoteValue($table)))
             ->fetchRow();
 
-        if ($hasTable && $this->connection->query(sprintf('SELECT * FROM %s LIMIT 1', $quotedTable))->fetchRow()) {
+        if ($tableExists && $this->connection
+            ->query(sprintf('SELECT * FROM %s LIMIT 1', $quotedTable))
+            ->fetchRow()) {
             return false;
         }
 
@@ -38,7 +40,12 @@ final class MySQL implements AbstractDB, AbstractPeers
         );
 
         $this->connection
-            ->prepare(sprintf('INSERT INTO %s (`id`) VALUES (:id) ON DUPLICATE KEY UPDATE `id` = VALUES(`id`)', $quotedTable))
+            ->prepare(
+                sprintf(
+                    'INSERT INTO %s (`id`) VALUES (:id) ON DUPLICATE KEY UPDATE `id` = VALUES(`id`)',
+                    $quotedTable
+                )
+            )
             ->execute(['id' => 0]);
 
         return true;
@@ -69,7 +76,7 @@ final class MySQL implements AbstractDB, AbstractPeers
         }
     }
 
-    public function get(string $table): array | null
+    public function get(string $table): array|null
     {
         return $this->connection
             ->query(sprintf('SELECT * FROM %s', $this->quoteIdentifier($table)))
@@ -78,34 +85,28 @@ final class MySQL implements AbstractDB, AbstractPeers
 
     public function delete(string $table, string $key): void
     {
-        $this->connection
-            ->query(
-                sprintf('ALTER TABLE %s DROP COLUMN %s', $this->quoteIdentifier($table), $this->quoteIdentifier($key))
-            );
+        $this->connection->query(
+            sprintf(
+                'ALTER TABLE %s DROP COLUMN %s',
+                $this->quoteIdentifier($table),
+                $this->quoteIdentifier($key)
+            )
+        );
     }
 
     public function exists(string $table, string $key): bool
     {
-        $result = $this->connection
-            ->query(sprintf('SHOW COLUMNS FROM %s', $this->quoteIdentifier($table)));
-
-        while ($row = $result->fetchRow()) {
-            if (($row['Field'] ?? null) === $key) {
-                return true;
-            }
-        }
-
-        return false;
+        return $this->columnExists($table, $key);
     }
 
     public function initPeer(string $table): bool
     {
         $quotedTable = $this->quoteIdentifier($table);
-        $hasTable = $this->connection
+        $tableExists = $this->connection
             ->query(sprintf('SHOW TABLES LIKE %s', $this->quoteValue($table)))
             ->fetchRow();
 
-        if ($hasTable) {
+        if ($tableExists) {
             return false;
         }
 
@@ -142,8 +143,11 @@ final class MySQL implements AbstractDB, AbstractPeers
             }
 
             $columns = array_keys($value);
-            $placeholders = array_map(fn(string $col): string => ':' . $col, $columns);
-            $assignments = array_map(fn(string $col): string => sprintf('%1$s = VALUES(%1$s)', $this->quoteIdentifier($col)), $columns);
+            $placeholders = array_map(static fn(string $col): string => ':' . $col, $columns);
+            $assignments = array_map(
+                fn(string $col): string => sprintf('%1$s = VALUES(%1$s)', $this->quoteIdentifier($col)),
+                $columns
+            );
             $quotedColumns = array_map(fn(string $col): string => $this->quoteIdentifier($col), $columns);
 
             $sql = sprintf(
@@ -162,7 +166,7 @@ final class MySQL implements AbstractDB, AbstractPeers
         }
     }
 
-    public function getPeer(string $table, string $key, mixed $value): array | null
+    public function getPeer(string $table, string $key, mixed $value): array|null
     {
         return $this->connection
             ->prepare(
@@ -192,7 +196,13 @@ final class MySQL implements AbstractDB, AbstractPeers
     private function columnExists(string $table, string $column): bool
     {
         $result = $this->connection
-            ->query(sprintf('SHOW COLUMNS FROM %s LIKE %s', $this->quoteIdentifier($table), $this->quoteValue($column)));
+            ->query(
+                sprintf(
+                    'SHOW COLUMNS FROM %s LIKE %s',
+                    $this->quoteIdentifier($table),
+                    $this->quoteValue($column)
+                )
+            );
 
         return $result->fetchRow() !== null;
     }
