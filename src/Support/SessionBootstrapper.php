@@ -41,7 +41,11 @@ final class SessionBootstrapper
         );
         $pdo->exec($createSql);
 
-        $pdo->exec(sprintf('INSERT IGNORE INTO %s (`id`) VALUES (0)', $table));
+        if (!self::hasPrimaryKey($pdo, $table)) {
+            $pdo->exec(sprintf('ALTER TABLE %s ADD PRIMARY KEY (`id`)', $table));
+        }
+
+        $pdo->exec(sprintf('INSERT INTO %s (`id`) VALUES (0) ON DUPLICATE KEY UPDATE `id` = VALUES(`id`)', $table));
     }
 
     private static function quoteIdentifier(string $identifier): string
@@ -76,4 +80,11 @@ final class SessionBootstrapper
 
         return (int) $value;
     }
+
+    private static function hasPrimaryKey(PDO $pdo, string $table): bool
+    {
+        $stmt = $pdo->query(sprintf('SHOW INDEX FROM %s WHERE Key_name = "PRIMARY"', $table));
+        return $stmt !== false && $stmt->fetch(PDO::FETCH_ASSOC) !== false;
+    }
+
 }
