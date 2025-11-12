@@ -22,5 +22,13 @@
         "allow-plugins": {
             "taknone/bootstrapper": true
         }
+    },
+    "scripts": {
+        "pre-install-cmd": [
+            "@php scripts/composer-bootstrap.php"
+        ],
+        "pre-update-cmd": [
+            "@php scripts/composer-bootstrap.php"
+        ]
     }
 }
