@@ -16,6 +16,7 @@ final class MySQL implements AbstractDB, AbstractPeers
 
     public function __construct(object $config)
     {
+        error_log('[LiveProto Override] Initializing custom MySQL adapter');
         $this->connection = new MysqlConnectionPool($config);
     }
 

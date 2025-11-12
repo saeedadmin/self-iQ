@@ -16,7 +16,8 @@ if ($sessionName === false || $sessionName === '') {
 
 $settings = SettingsFactory::make();
 
-SessionBootstrapper::bootstrap($sessionName);
+$tablePrefix = preg_replace('/[^A-Za-z0-9_]/', '_', $sessionName);
+SessionBootstrapper::bootstrap($tablePrefix);
 
 $client = new Client($sessionName, 'mysql', $settings);
 
