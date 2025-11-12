@@ -60,6 +60,22 @@ final class Tools
         return $data;
     }
 
+    public static function set(string $key, string $class): void
+    {
+        if (!class_exists($class)) {
+            Logging::log('Tools', sprintf('Attempted to register non-existent class %s for key %s', $class, $key), E_WARNING);
+            return;
+        }
+
+        self::registry()[$key] = $class;
+        Logging::log('Tools', sprintf('Registered %s as handler for %s', $class, $key), E_NOTICE);
+    }
+
+    public static function get(string $key): ?string
+    {
+        return self::registry()[$key] ?? null;
+    }
+
     public static function inferType(mixed $data): string
     {
         if ($data === null) {
@@ -101,5 +117,15 @@ final class Tools
         }
 
         return false;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private static function &registry(): array
+    {
+        static $map = [];
+
+        return $map;
     }
 }

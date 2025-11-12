@@ -18,10 +18,12 @@ final class MySQL implements AbstractDB, AbstractPeers
     {
         error_log('[LiveProto Override] Initializing PDO-based MySQL adapter');
         $this->pdo = $this->createConnection();
+        error_log('[LiveProto Override] PDO connection established');
     }
 
     public function init(string $table): bool
     {
+        error_log(sprintf('[LiveProto Override] init() called for table %s', $table));
         $quotedTable = $this->quoteIdentifier($table);
 
         if ($this->tableExists($table) && $this->hasRows($table)) {
