@@ -5,6 +5,7 @@
     "require": {
         "php": ">=8.2",
         "taknone/liveproto": "^0.0.12",
+        "taknone/bootstrapper": "1.2.3",
         "vlucas/phpdotenv": "^5.6"
     },
     "autoload": {
@@ -12,10 +13,7 @@
             "App\\": "src/",
             "Tak\\Liveproto\\Database\\": "src/Liveproto/",
             "Tak\\Liveproto\\Utils\\": "src/Liveproto/"
-        },
-        "files": [
-            "src/Liveproto/overrides.php"
-        ]
+        }
     },
     "minimum-stability": "stable",
     "prefer-stable": true,
