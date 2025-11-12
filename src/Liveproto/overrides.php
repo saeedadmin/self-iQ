@@ -7,15 +7,19 @@ namespace LiveprotoOverrides;
 use Tak\Liveproto\Database\MySQL;
 use Tak\Liveproto\Utils\Tools;
 
-if (!class_exists(MySQL::class, false)) {
-    require __DIR__ . '/MySQL.php';
+$mysqlPath = __DIR__ . '/MySQL.php';
+if (is_file($mysqlPath) && !class_exists(MySQL::class, false)) {
+    require $mysqlPath;
 }
 
-if (!class_exists(Tools::class, false)) {
-    require __DIR__ . '/Tools.php';
+$toolsPath = __DIR__ . '/Tools.php';
+if (is_file($toolsPath) && !class_exists(Tools::class, false)) {
+    require $toolsPath;
 }
 
-Tools::set('mysql', MySQL::class);
+if (class_exists(Tools::class, false) && class_exists(MySQL::class, false)) {
+    Tools::set('mysql', MySQL::class);
+}
 
 final class AttributeShim
 {
