@@ -191,10 +191,10 @@ final class MySQL implements AbstractDB, AbstractPeers
 
     private function tableExists(string $table): bool
     {
-        $stmt = $this->pdo->prepare('SHOW TABLES LIKE :table');
-        $stmt->execute(['table' => $table]);
+        $pattern = $this->pdo->quote($table);
+        $statement = $this->pdo->query(sprintf('SHOW TABLES LIKE %s', $pattern));
 
-        return $stmt->fetchColumn() !== false;
+        return $statement !== false && $statement->fetchColumn() !== false;
     }
 
     private function hasRows(string $table): bool
@@ -224,15 +224,16 @@ final class MySQL implements AbstractDB, AbstractPeers
 
     private function columnExists(string $table, string $column): bool
     {
-        $stmt = $this->pdo->prepare(
+        $pattern = $this->pdo->quote($column);
+        $statement = $this->pdo->query(
             sprintf(
-                'SHOW COLUMNS FROM %s LIKE :column',
-                $this->quoteIdentifier($table)
+                'SHOW COLUMNS FROM %s LIKE %s',
+                $this->quoteIdentifier($table),
+                $pattern
             )
         );
-        $stmt->execute(['column' => $column]);
 
-        return $stmt->fetchColumn() !== false;
+        return $statement !== false && $statement->fetchColumn() !== false;
     }
 
     private function quoteIdentifier(string $identifier): string
