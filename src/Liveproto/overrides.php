@@ -21,6 +21,11 @@ if (class_exists(Tools::class, false) && class_exists(MySQL::class, false)) {
     Tools::set('mysql', MySQL::class);
 }
 
+$attributesShim = __DIR__ . '/Attributes/AttributesEngine.php';
+if (is_file($attributesShim) && !trait_exists('Tak\\Attributes\\AttributesEngine', false)) {
+    require $attributesShim;
+}
+
 final class AttributeShim
 {
     private const CLASS_MAP = [
