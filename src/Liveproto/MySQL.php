@@ -4,89 +4,78 @@ declare(strict_types=1);
 
 namespace Tak\Liveproto\Database;
 
-use Amp\Mysql\MysqlConnectionPool;
-use Amp\Sync\LocalMutex;
-use Revolt\EventLoop;
+use PDO;
+use PDOException;
+use RuntimeException;
 use Tak\Liveproto\Utils\Logging;
 use Tak\Liveproto\Utils\Tools;
 
 final class MySQL implements AbstractDB, AbstractPeers
 {
-    private MysqlConnectionPool $connection;
+    private PDO $pdo;
 
     public function __construct(object $config)
     {
-        error_log('[LiveProto Override] Initializing custom MySQL adapter');
-        $this->connection = new MysqlConnectionPool($config);
+        error_log('[LiveProto Override] Initializing PDO-based MySQL adapter');
+        $this->pdo = $this->createConnection();
     }
 
     public function init(string $table): bool
     {
         $quotedTable = $this->quoteIdentifier($table);
-        $tableExists = $this->connection
-            ->query(sprintf('SHOW TABLES LIKE %s', $this->quoteValue($table)))
-            ->fetchRow();
 
-        if ($tableExists && $this->connection
-            ->query(sprintf('SELECT * FROM %s LIMIT 1', $quotedTable))
-            ->fetchRow()) {
+        if ($this->tableExists($table) && $this->hasRows($table)) {
             return false;
         }
 
-        $this->connection->query(
+        $this->pdo->exec(
             sprintf(
                 'CREATE TABLE IF NOT EXISTS %s (`id` BIGINT NOT NULL PRIMARY KEY) DEFAULT CHARSET = utf8mb4',
                 $quotedTable
             )
         );
 
-        $this->connection
-            ->prepare(
-                sprintf(
-                    'INSERT INTO %s (`id`) VALUES (:id) ON DUPLICATE KEY UPDATE `id` = VALUES(`id`)',
-                    $quotedTable
-                )
+        $statement = $this->pdo->prepare(
+            sprintf(
+                'INSERT INTO %s (`id`) VALUES (0) ON DUPLICATE KEY UPDATE `id` = VALUES(`id`)',
+                $quotedTable
             )
-            ->execute(['id' => 0]);
+        );
+        $statement->execute();
 
         return true;
     }
 
     public function set(string $table, string $key, mixed $value, string $type): void
     {
-        static $mutex = new LocalMutex();
-        $lock = $mutex->acquire();
-
-        $quotedTable = $this->quoteIdentifier($table);
-        $quotedColumn = $this->quoteIdentifier($key);
-
         try {
-            if (!$this->columnExists($table, $key)) {
-                $this->connection->query(
-                    sprintf('ALTER TABLE %s ADD COLUMN %s %s', $quotedTable, $quotedColumn, $type)
-                );
-            }
+            $this->addColumnIfMissing($table, $key, $type);
 
-            $this->connection
-                ->prepare(sprintf('UPDATE %s SET %s = :new', $quotedTable, $quotedColumn))
-                ->execute(['new' => $value]);
-        } catch (\Throwable $error) {
+            $stmt = $this->pdo->prepare(
+                sprintf(
+                    'UPDATE %s SET %s = :value LIMIT 1',
+                    $this->quoteIdentifier($table),
+                    $this->quoteIdentifier($key)
+                )
+            );
+            $stmt->execute(['value' => $value]);
+        } catch (PDOException $error) {
             Logging::log('MySQL', $error->getMessage(), E_WARNING);
-        } finally {
-            EventLoop::queue($lock->release(...));
         }
     }
 
     public function get(string $table): array|null
     {
-        return $this->connection
-            ->query(sprintf('SELECT * FROM %s', $this->quoteIdentifier($table)))
-            ->fetchRow();
+        $stmt = $this->pdo->query(
+            sprintf('SELECT * FROM %s LIMIT 1', $this->quoteIdentifier($table))
+        );
+
+        return $stmt === false ? null : $stmt->fetch() ?: null;
     }
 
     public function delete(string $table, string $key): void
     {
-        $this->connection->query(
+        $this->pdo->exec(
             sprintf(
                 'ALTER TABLE %s DROP COLUMN %s',
                 $this->quoteIdentifier($table),
@@ -102,19 +91,14 @@ final class MySQL implements AbstractDB, AbstractPeers
 
     public function initPeer(string $table): bool
     {
-        $quotedTable = $this->quoteIdentifier($table);
-        $tableExists = $this->connection
-            ->query(sprintf('SHOW TABLES LIKE %s', $this->quoteValue($table)))
-            ->fetchRow();
-
-        if ($tableExists) {
+        if ($this->tableExists($table)) {
             return false;
         }
 
-        $this->connection->query(
+        $this->pdo->exec(
             sprintf(
                 'CREATE TABLE IF NOT EXISTS %s (`id` BIGINT PRIMARY KEY) DEFAULT CHARSET = utf8mb4',
-                $quotedTable
+                $this->quoteIdentifier($table)
             )
         );
 
@@ -123,89 +107,126 @@ final class MySQL implements AbstractDB, AbstractPeers
 
     public function setPeer(string $table, mixed $value): void
     {
-        static $mutex = new LocalMutex();
-        $lock = $mutex->acquire();
-
-        $quotedTable = $this->quoteIdentifier($table);
-
         try {
+            $value = Tools::marshal($value);
+
             foreach ($value as $column => $columnValue) {
-                $type = Tools::inferType($columnValue);
-                if (!$this->columnExists($table, $column)) {
-                    $this->connection->query(
-                        sprintf(
-                            'ALTER TABLE %s ADD COLUMN %s %s',
-                            $quotedTable,
-                            $this->quoteIdentifier($column),
-                            $type
-                        )
-                    );
-                }
+                $this->addColumnIfMissing($table, $column, Tools::inferType($columnValue));
             }
 
             $columns = array_keys($value);
+            $quotedColumns = array_map(fn(string $col): string => $this->quoteIdentifier($col), $columns);
             $placeholders = array_map(static fn(string $col): string => ':' . $col, $columns);
             $assignments = array_map(
                 fn(string $col): string => sprintf('%1$s = VALUES(%1$s)', $this->quoteIdentifier($col)),
                 $columns
             );
-            $quotedColumns = array_map(fn(string $col): string => $this->quoteIdentifier($col), $columns);
 
             $sql = sprintf(
                 'INSERT INTO %s (%s) VALUES (%s) ON DUPLICATE KEY UPDATE %s',
-                $quotedTable,
+                $this->quoteIdentifier($table),
                 implode(', ', $quotedColumns),
                 implode(', ', $placeholders),
                 implode(', ', $assignments)
             );
 
-            $this->connection->prepare($sql)->execute($value);
-        } catch (\Throwable $error) {
+            $this->pdo->prepare($sql)->execute($value);
+        } catch (PDOException $error) {
             Logging::log('MySQL', $error->getMessage(), E_WARNING);
-        } finally {
-            EventLoop::queue($lock->release(...));
         }
     }
 
     public function getPeer(string $table, string $key, mixed $value): array|null
     {
-        return $this->connection
-            ->prepare(
-                sprintf(
-                    'SELECT * FROM %s WHERE %s = :value',
-                    $this->quoteIdentifier($table),
-                    $this->quoteIdentifier($key)
-                )
+        $stmt = $this->pdo->prepare(
+            sprintf(
+                'SELECT * FROM %s WHERE %s = :value LIMIT 1',
+                $this->quoteIdentifier($table),
+                $this->quoteIdentifier($key)
             )
-            ->execute(['value' => $value])
-            ->fetchRow();
+        );
+        $stmt->execute(['value' => $value]);
+
+        return $stmt->fetch() ?: null;
     }
 
     public function deletePeer(string $table, string $key, mixed $value): void
     {
-        $this->connection
-            ->prepare(
-                sprintf(
-                    'DELETE FROM %s WHERE %s = :value',
-                    $this->quoteIdentifier($table),
-                    $this->quoteIdentifier($key)
-                )
+        $stmt = $this->pdo->prepare(
+            sprintf(
+                'DELETE FROM %s WHERE %s = :value',
+                $this->quoteIdentifier($table),
+                $this->quoteIdentifier($key)
             )
-            ->execute(['value' => $value]);
+        );
+        $stmt->execute(['value' => $value]);
+    }
+
+    private function createConnection(): PDO
+    {
+        $host = $this->envString('MYSQL_HOST');
+        $port = $this->envInt('MYSQL_PORT', 3306);
+        $database = $this->envString('MYSQL_DB');
+        $username = $this->envString('MYSQL_USER');
+        $password = $this->envString('MYSQL_PASSWORD');
+
+        $dsn = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=utf8mb4', $host, $port, $database);
+
+        try {
+            return new PDO($dsn, $username, $password, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ]);
+        } catch (PDOException $exception) {
+            throw new RuntimeException('Unable to connect to MySQL: ' . $exception->getMessage(), 0, $exception);
+        }
+    }
+
+    private function tableExists(string $table): bool
+    {
+        $stmt = $this->pdo->prepare('SHOW TABLES LIKE :table');
+        $stmt->execute(['table' => $table]);
+
+        return $stmt->fetchColumn() !== false;
+    }
+
+    private function hasRows(string $table): bool
+    {
+        $stmt = $this->pdo->query(
+            sprintf('SELECT 1 FROM %s LIMIT 1', $this->quoteIdentifier($table))
+        );
+
+        return $stmt !== false && $stmt->fetchColumn() !== false;
+    }
+
+    private function addColumnIfMissing(string $table, string $column, string $type): void
+    {
+        if ($this->columnExists($table, $column)) {
+            return;
+        }
+
+        $this->pdo->exec(
+            sprintf(
+                'ALTER TABLE %s ADD COLUMN %s %s',
+                $this->quoteIdentifier($table),
+                $this->quoteIdentifier($column),
+                $type
+            )
+        );
     }
 
     private function columnExists(string $table, string $column): bool
     {
-        $result = $this->connection
-            ->query(
-                sprintf(
-                    'SHOW COLUMNS FROM %s LIKE %s',
-                    $this->quoteIdentifier($table),
-                    $this->quoteValue($column)
-                )
-            );
+        $stmt = $this->pdo->prepare(
+            sprintf(
+                'SHOW COLUMNS FROM %s LIKE :column',
+                $this->quoteIdentifier($table)
+            )
+        );
+        $stmt->execute(['column' => $column]);
 
-        return $result->fetchRow() !== null;
+        return $stmt->fetchColumn() !== false;
     }
 
     private function quoteIdentifier(string $identifier): string
@@ -213,8 +234,23 @@ final class MySQL implements AbstractDB, AbstractPeers
         return '`' . str_replace('`', '``', $identifier) . '`';
     }
 
-    private function quoteValue(string $value): string
+    private function envString(string $key): string
     {
-        return "'" . str_replace("'", "''", $value) . "'";
+        $value = getenv($key);
+        if ($value === false || $value === '') {
+            throw new RuntimeException(sprintf('Environment variable %s is required for LiveProto MySQL adapter.', $key));
+        }
+
+        return (string) $value;
+    }
+
+    private function envInt(string $key, int $default): int
+    {
+        $value = getenv($key);
+        if ($value === false || $value === '') {
+            return $default;
+        }
+
+        return (int) $value;
     }
 }
