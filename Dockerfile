@@ -20,6 +20,7 @@ WORKDIR /app
 COPY composer.json composer.lock* ./
 COPY scripts/ scripts/
 COPY src/Liveproto/overrides.php src/Liveproto/overrides.php
+COPY src/Liveproto/Attributes src/Liveproto/Attributes
 RUN composer install --no-dev --prefer-dist --no-progress --no-interaction
 
 COPY . .
