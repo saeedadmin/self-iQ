@@ -19,3 +19,9 @@ if (is_file($shimSource) && !is_file($shimTarget)) {
 
     copy($shimSource, $shimTarget);
 }
+
+if (trait_exists('Tak\\Attributes\\AttributesEngine', false)) {
+    fwrite(STDERR, "[bootstrap] AttributesEngine trait loaded\n");
+} else {
+    fwrite(STDERR, "[bootstrap] AttributesEngine trait NOT loaded\n");
+}
