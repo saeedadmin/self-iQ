@@ -52,8 +52,8 @@ final class Tools
             if (is_object($value) || is_array($value) || is_bool($value) || mb_check_encoding(var_export($value, true), 'UTF-8') === false) {
                 $data[$key] = 'serialize:' . base64_encode(serialize($value));
             } elseif (is_string($value) && str_starts_with($value, 'serialize:')) {
-                $serialize = substr($value, 10);
-                $data[$key] = unserialize(base64_decode($serialize));
+                $serialized = substr($value, 10);
+                $data[$key] = unserialize(base64_decode($serialized));
             }
         }
 
@@ -74,6 +74,11 @@ final class Tools
             'string' => 'TEXT',
             default => 'VARCHAR (' . mb_strlen((string) $data) . ')',
         };
+    }
+
+    public static function defaultFailHandler(string $worker, array $data): void
+    {
+        Logging::log($worker, 'Undefined handler called with: ' . json_encode($data, JSON_UNESCAPED_UNICODE), E_WARNING);
     }
 
     public static function base64_url_encode(string $string): string
