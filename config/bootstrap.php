@@ -8,6 +8,11 @@ $rootPath = dirname(__DIR__);
 
 require_once $rootPath . '/vendor/autoload.php';
 
+$overrides = $rootPath . '/src/Liveproto/overrides.php';
+if (is_file($overrides)) {
+    require_once $overrides;
+}
+
 if (is_file($rootPath . '/.env')) {
     Dotenv::createImmutable($rootPath)->safeLoad();
 }
