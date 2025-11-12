@@ -5,6 +5,7 @@
     "require": {
         "php": ">=8.2",
         "taknone/liveproto": "^0.0.12",
+        "taknone/attributes": "^1.1",
         "taknone/bootstrapper": "1.2.3",
         "vlucas/phpdotenv": "^5.6"
     },
