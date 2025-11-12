@@ -70,7 +70,13 @@ final class MySQL implements AbstractDB, AbstractPeers
             sprintf('SELECT * FROM %s LIMIT 1', $this->quoteIdentifier($table))
         );
 
-        return $stmt === false ? null : $stmt->fetch() ?: null;
+        if ($stmt === false) {
+            return null;
+        }
+
+        $result = $stmt->fetch();
+
+        return $result === false ? null : $result;
     }
 
     public function delete(string $table, string $key): void
