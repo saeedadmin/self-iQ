@@ -74,9 +74,6 @@ final class LoginController
         try {
             $client = $this->getClient();
             $state = $_SESSION[self::SESSION_KEY] ?? [];
-            if (!empty($state['phone_code_hash'])) {
-                $client->send_code(phone_number: preg_replace('/[^\d]/', '', $state['phone'] ?? ''), phone_code_hash: $state['phone_code_hash']);
-            }
             if (!$client->isAuthorized()) {
                 $client->connect();
             }
