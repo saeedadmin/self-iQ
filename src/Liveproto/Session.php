@@ -145,6 +145,7 @@ final class Session
                     if ($this->isSessionDataIncomplete($data)) {
                         $content = $this->generate();
                     } else {
+                        $data = $this->castSessionData($data);
                         if (!isset($data['peers']) || !($data['peers'] instanceof CachedPeers)) {
                             $data['peers'] = new CachedPeers($this->name);
                         }
@@ -324,5 +325,17 @@ final class Session
         }
 
         return false;
+    }
+
+    private function castSessionData(array $data): array
+    {
+        $intFields = ['port', 'dc', 'salt', 'sequence', 'time_offset', 'last_msg_id', 'api_id'];
+        foreach ($intFields as $field) {
+            if (isset($data[$field])) {
+                $data[$field] = (int) $data[$field];
+            }
+        }
+
+        return $data;
     }
 }
