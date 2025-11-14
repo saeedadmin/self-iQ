@@ -41,9 +41,20 @@ final class LoginController
                 $this->redirect('/');
             }
 
-            $client->send_code(phone_number: preg_replace('/[^\d]/', '', $phone));
+            $phoneNumber = preg_replace('/[^\d]/', '', $phone);
+            $sentCode = $client->send_code(phone_number: $phoneNumber);
 
-            $_SESSION[self::SESSION_KEY]['phone'] = $phone;
+            $_SESSION[self::SESSION_KEY] = array_merge(
+                $_SESSION[self::SESSION_KEY] ?? [],
+                [
+                    'phone' => $phone,
+                    'phone_code_hash' => $sentCode->phone_code_hash ?? null,
+                    'phone_registered' => $sentCode->phone_registered ?? null,
+                    'next_type' => $sentCode->next_type ?? null,
+                    'timeout' => $sentCode->timeout ?? null,
+                ]
+            );
+
             $this->setFlash('success', 'کد تایید ارسال شد.');
         } catch (Throwable $e) {
             $this->setFlash('error', 'خطا در ارسال کد: ' . $e->getMessage());
@@ -62,6 +73,10 @@ final class LoginController
 
         try {
             $client = $this->getClient();
+            $state = $_SESSION[self::SESSION_KEY] ?? [];
+            if (!empty($state['phone_code_hash'])) {
+                $client->send_code(phone_number: preg_replace('/[^\d]/', '', $state['phone'] ?? ''), phone_code_hash: $state['phone_code_hash']);
+            }
             if (!$client->isAuthorized()) {
                 $client->connect();
             }
