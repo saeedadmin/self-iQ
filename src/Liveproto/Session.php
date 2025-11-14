@@ -141,11 +141,16 @@ final class Session
                 if ($this->mysql->init($this->name)) {
                     $content = $this->generate();
                 } else {
-                    $content = new Content(Tools::marshal($this->mysql->get($this->name)), $this->savetime);
+                    $data = Tools::marshal($this->mysql->get($this->name) ?? []);
+                    if (!isset($data['peers']) || !($data['peers'] instanceof CachedPeers)) {
+                        $data['peers'] = new CachedPeers($this->name);
+                    }
+
+                    $content = new Content($data, $this->savetime);
                 }
 
                 $this->content = $content->setSession($this);
-                $this->content->peers->init($this->mysql);
+                $this->ensurePeers()->init($this->mysql);
                 $this->content->save(true);
                 break;
 
@@ -293,5 +298,14 @@ final class Session
             'password' => $this->password,
             'database' => $this->database,
         ];
+    }
+
+    private function ensurePeers(): CachedPeers
+    {
+        if (!isset($this->content['peers']) || !($this->content['peers'] instanceof CachedPeers)) {
+            $this->content['peers'] = new CachedPeers($this->name);
+        }
+
+        return $this->content['peers'];
     }
 }
