@@ -62,6 +62,9 @@ final class LoginController
 
         try {
             $client = $this->getClient();
+            if (!$client->isAuthorized()) {
+                $client->connect();
+            }
             $client->sign_in(code: $phoneCode);
 
             $this->setFlash('success', 'ورود با موفقیت انجام شد.');
