@@ -75,6 +75,46 @@ final class Binary implements Stringable
         return $this->readBytes();
     }
 
+    public function tgreadVector(string $type, bool $undo = false): array
+    {
+        return $this->readVector($type, $undo);
+    }
+
+    public function tgreadInt(): mixed
+    {
+        return $this->readInt();
+    }
+
+    public function tgreadLong(): mixed
+    {
+        return $this->readLong();
+    }
+
+    public function tgreadByte(): mixed
+    {
+        return $this->readByte();
+    }
+
+    public function tgreadDouble(): mixed
+    {
+        return $this->readDouble();
+    }
+
+    public function tgreadBool(bool $undo = false): bool
+    {
+        return $this->readBool($undo);
+    }
+
+    public function tgreadObject(bool $undo = false): object
+    {
+        return $this->readObject($undo);
+    }
+
+    public function tgreadLargeInt(int $bits = 0x40): mixed
+    {
+        return $this->readLargeInt($bits);
+    }
+
     public function readBool(bool $undo = false): bool
     {
         if ($undo) {
