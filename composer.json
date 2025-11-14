@@ -17,6 +17,7 @@
             "App\\": "src/",
             "Tak\\Liveproto\\Database\\": "src/Liveproto/",
             "Tak\\Liveproto\\Utils\\": "src/Liveproto/",
+            "Tak\\Liveproto\\Tl\\": "src/Liveproto/Tl/",
             "Tak\\Attributes\\": "src/Liveproto/Attributes/"
         }
     },
