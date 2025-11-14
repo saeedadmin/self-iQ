@@ -115,6 +115,51 @@ final class Binary implements Stringable
         return $this->readLargeInt($bits);
     }
 
+    public function tgwriteBytes(string $data): self
+    {
+        return $this->writeBytes($data);
+    }
+
+    public function tgwriteVector(array $vectors, string $type, bool $redo = false): self
+    {
+        return $this->writeVector($vectors, $type, $redo);
+    }
+
+    public function tgwriteInt(mixed $value): self
+    {
+        return $this->writeInt($value);
+    }
+
+    public function tgwriteLong(mixed $value): self
+    {
+        return $this->writeLong($value);
+    }
+
+    public function tgwriteByte(mixed $value): self
+    {
+        return $this->writeByte($value);
+    }
+
+    public function tgwriteDouble(mixed $value): self
+    {
+        return $this->writeDouble($value);
+    }
+
+    public function tgwriteBool(bool $boolean, bool $redo = false): self
+    {
+        return $this->writeBool($boolean, $redo);
+    }
+
+    public function tgwriteObject(object $object, bool $redo = false): self
+    {
+        return $this->writeObject($object, $redo);
+    }
+
+    public function tgwriteLargeInt(mixed $value, int $bits = 0x40): self
+    {
+        return $this->writeLargeInt($value, $bits);
+    }
+
     public function readBool(bool $undo = false): bool
     {
         if ($undo) {
