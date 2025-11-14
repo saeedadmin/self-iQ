@@ -17,6 +17,11 @@ if (is_file($toolsPath) && !class_exists(Tools::class, false)) {
     require $toolsPath;
 }
 
+$binaryPath = __DIR__ . '/Binary.php';
+if (is_file($binaryPath) && !class_exists('Tak\Liveproto\Utils\Binary', false)) {
+    require $binaryPath;
+}
+
 if (class_exists(Tools::class, false) && class_exists(MySQL::class, false)) {
     Tools::set('mysql', MySQL::class);
 }
