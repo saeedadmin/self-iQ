@@ -142,11 +142,15 @@ final class Session
                     $content = $this->generate();
                 } else {
                     $data = Tools::marshal($this->mysql->get($this->name) ?? []);
-                    if (!isset($data['peers']) || !($data['peers'] instanceof CachedPeers)) {
-                        $data['peers'] = new CachedPeers($this->name);
-                    }
+                    if ($this->isSessionDataIncomplete($data)) {
+                        $content = $this->generate();
+                    } else {
+                        if (!isset($data['peers']) || !($data['peers'] instanceof CachedPeers)) {
+                            $data['peers'] = new CachedPeers($this->name);
+                        }
 
-                    $content = new Content($data, $this->savetime);
+                        $content = new Content($data, $this->savetime);
+                    }
                 }
 
                 $this->content = $content->setSession($this);
@@ -307,5 +311,18 @@ final class Session
         }
 
         return $this->content['peers'];
+    }
+
+    private function isSessionDataIncomplete(array $data): bool
+    {
+        $requiredKeys = ['ip', 'port', 'dc', 'auth_key'];
+
+        foreach ($requiredKeys as $key) {
+            if (!array_key_exists($key, $data) || $data[$key] === null) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
