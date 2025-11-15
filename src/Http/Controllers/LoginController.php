@@ -77,7 +77,13 @@ final class LoginController
             if (!$client->isAuthorized()) {
                 $client->connect();
             }
-            $client->sign_in(code: $phoneCode);
+            
+            // Pass phone_code_hash if available from session
+            if (!empty($state['phone_code_hash'])) {
+                $client->sign_in(code: $phoneCode, phone_code_hash: $state['phone_code_hash']);
+            } else {
+                $client->sign_in(code: $phoneCode);
+            }
 
             $this->setFlash('success', 'ورود با موفقیت انجام شد.');
         } catch (Throwable $e) {
