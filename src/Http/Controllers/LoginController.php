@@ -48,6 +48,7 @@ final class LoginController
                 $_SESSION[self::SESSION_KEY] ?? [],
                 [
                     'phone' => $phone,
+                    'phone_normalized' => $phoneNumber,
                     'phone_code_hash' => $sentCode->phone_code_hash ?? null,
                     'phone_registered' => $sentCode->phone_registered ?? null,
                     'next_type' => $sentCode->next_type ?? null,
@@ -74,13 +75,30 @@ final class LoginController
         try {
             $client = $this->getClient();
             $state = $_SESSION[self::SESSION_KEY] ?? [];
+
+            $phoneNumber = $state['phone_normalized'] ?? null;
+            $phoneCodeHash = $state['phone_code_hash'] ?? null;
+
+            if ($phoneNumber === null || $phoneNumber === '' || $phoneCodeHash === null || $phoneCodeHash === '') {
+                $this->setFlash('error', 'اطلاعات ورود نامعتبر است. لطفاً دوباره تلاش کنید.');
+                $this->redirect('/');
+            }
+
             if (!$client->isAuthorized()) {
                 $client->connect();
             }
-            
-            $client->sign_in(code: $phoneCode);
 
-            $this->setFlash('success', 'ورود با موفقیت انجام شد.');
+            $result = $client->auth->signIn(
+                phone_number: $phoneNumber,
+                phone_code: $phoneCode,
+                phone_code_hash: $phoneCodeHash
+            );
+
+            if (isset($result->_) && $result->_ === 'auth.authorizationSignUpRequired') {
+                $this->setFlash('error', 'نیاز به ثبت‌نام است.');
+            } else {
+                $this->setFlash('success', 'ورود با موفقیت انجام شد.');
+            }
         } catch (Throwable $e) {
             if (str_contains($e->getMessage(), 'SESSION_PASSWORD_NEEDED')) {
                 $_SESSION[self::SESSION_KEY]['need_password'] = true;
