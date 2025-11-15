@@ -55,8 +55,9 @@ final class MySQL implements AbstractDB, AbstractPeers
 
             $stmt = $this->pdo->prepare(
                 sprintf(
-                    'UPDATE %s SET %s = :value LIMIT 1',
+                    'INSERT INTO %s (`id`, %s) VALUES (0, :value) ON DUPLICATE KEY UPDATE %s = :value',
                     $this->quoteIdentifier($table),
+                    $this->quoteIdentifier($key),
                     $this->quoteIdentifier($key)
                 )
             );
